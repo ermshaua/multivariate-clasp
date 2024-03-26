@@ -5,11 +5,11 @@ from numba import njit, prange, get_num_threads, set_num_threads
 from numba.typed.typedlist import List
 from sklearn.exceptions import NotFittedError
 
-from claspy.nearest_neighbour import KSubsequenceNeighbours
-from claspy.nearest_neighbour import cross_val_labels
-from claspy.scoring import map_scores
-from claspy.utils import check_input_time_series, check_excl_radius, numba_cache_safe
-from claspy.validation import map_validation_tests
+from mclasp.nearest_neighbour import KSubsequenceNeighbours
+from mclasp.nearest_neighbour import cross_val_labels
+from mclasp.scoring import map_scores
+from mclasp.utils import check_input_time_series, check_excl_radius, numba_cache_safe
+from mclasp.validation import map_validation_tests
 
 
 @njit(fastmath=True, cache=False)
@@ -167,9 +167,14 @@ class ClaSP:
         ValueError
             If the input time series has less than 2*min_seg_size data points.
         """
-        check_input_time_series(time_series)
+        # TODO: check multivariate TS
+        # check_input_time_series(time_series)
         self.min_seg_size = self.window_size * self.excl_radius
         self.lbound, self.ubound = 0, time_series.shape[0]
+
+        if time_series.ndim == 1:
+            # make ts multi-dimensional
+            time_series = time_series.reshape(-1, 1)
 
         if time_series.shape[0] < 2 * self.min_seg_size:
             raise ValueError("Time series must at least have 2*min_seg_size data points.")
@@ -387,8 +392,13 @@ class ClaSPEnsemble(ClaSP):
         ValueError
             If the input time series has less than 2 times the minimum segment size.
         """
-        check_input_time_series(time_series)
+        # TODO: check multivariate TS
+        # check_input_time_series(time_series)
         self.min_seg_size = self.window_size * self.excl_radius
+
+        if time_series.ndim == 1:
+            # make ts multi-dimensional
+            time_series = time_series.reshape(-1, 1)
 
         if time_series.shape[0] < 2 * self.min_seg_size:
             raise ValueError("Time series must at least have 2*min_seg_size data points.")

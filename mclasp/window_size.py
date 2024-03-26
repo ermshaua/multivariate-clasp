@@ -6,7 +6,7 @@ import pandas as pd
 from scipy.signal import find_peaks
 from statsmodels.tsa.stattools import acf
 
-from claspy.utils import check_input_time_series
+from mclasp.utils import check_input_time_series
 
 
 def _suss_score(time_series, window_size, stats):

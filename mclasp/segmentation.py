@@ -7,14 +7,14 @@ import numpy as np
 import pandas as pd
 from sklearn.exceptions import NotFittedError
 
-from claspy.clasp import ClaSPEnsemble
-from claspy.utils import check_input_time_series, check_excl_radius
-from claspy.window_size import map_window_size_methods
+from mclasp.clasp import ClaSPEnsemble
+from mclasp.utils import check_input_time_series, check_excl_radius
+from mclasp.window_size import map_window_size_methods
 
 
-class BinaryClaSPSegmentation:
+class MultivariateClaSPSegmentation:
     """
-    Segment time series data using the binary segmentation algorithm with ClaSP.
+    Segment time series data using the multivariate segmentation algorithm with ClaSP.
 
     Parameters
     ----------
@@ -195,10 +195,23 @@ class BinaryClaSPSegmentation:
         ValueError
             If the input time series has less than 2 times the minimum segment size.
         """
-        check_input_time_series(time_series)
+        # TODO: check multivariate TS
+        # check_input_time_series(time_series)
+
+        if time_series.ndim == 1:
+            # make ts multi-dimensional
+            time_series = time_series.reshape(-1, 1)
 
         if isinstance(self.window_size, str):
-            self.window_size = max(1, map_window_size_methods(self.window_size)(time_series) // 2)
+            W = []
+
+            for dim in range(time_series.shape[1]):
+                W.append(max(1, map_window_size_methods(self.window_size)(time_series[:, dim])))
+
+            if len(W) > 0:
+                self.window_size = int(np.min(W))
+            else:
+                self.window_size = 10
 
         self.min_seg_size = self.window_size * self.excl_radius
 

@@ -1,6 +1,8 @@
 import os
 import sys
 
+from mclasp.segmentation import MultivariateClaSPSegmentation
+
 sys.path.insert(0, "../")
 
 import daproli as dp
@@ -35,8 +37,18 @@ def evaluate_clasp(dataset, w, cps_true, labels, ts, **seg_kwargs):
     return evalute_segmentation_algorithm(dataset, ts.shape[0], cps_true, cps_pred)
 
 
+def evaluate_mclasp(dataset, w, cps_true, labels, ts, **seg_kwargs):
+    clasp = MultivariateClaSPSegmentation(n_jobs=-1)
+    cps_pred = clasp.fit_predict(ts)
+
+    return evalute_segmentation_algorithm(dataset, ts.shape[0], cps_true, cps_pred)
+
+
 def evaluate_candidate(dataset_name, candidate_name, eval_func, columns=None, n_jobs=1, verbose=0, **seg_kwargs):
     df = load_has_datasets()
+
+    # apply selection
+    # df = df.sample(n=25, random_state=2357)
 
     df_cand = dp.map(
         lambda _, args: eval_func(*args, **seg_kwargs),
@@ -65,7 +77,8 @@ def evaluate_competitor(dataset_name, exp_path, n_jobs, verbose):
         os.mkdir(exp_path)
 
     competitors = [
-        ("ClaSP", evaluate_clasp),
+        # ("ClaSP", evaluate_clasp),
+        ("MClaSP", evaluate_mclasp),
     ]
 
     for candidate_name, eval_func in competitors:
@@ -84,7 +97,7 @@ def evaluate_competitor(dataset_name, exp_path, n_jobs, verbose):
 
 if __name__ == '__main__':
     exp_path = "../experiments/competitor/"
-    n_jobs, verbose = 8, 0
+    n_jobs, verbose = 1, 0
 
     if not os.path.exists(exp_path):
         os.mkdir(exp_path)

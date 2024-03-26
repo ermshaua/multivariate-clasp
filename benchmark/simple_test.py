@@ -1,8 +1,7 @@
 import logging, sys
-
-from claspy.segmentation import BinaryClaSPSegmentation
-
 sys.path.insert(0, "../")
+
+from mclasp.segmentation import MultivariateClaSPSegmentation
 
 
 from benchmark.metrics import covering, f_measure
@@ -21,8 +20,8 @@ if __name__ == '__main__':
     dataset, w, cps_true, labels, ts = df_data.iloc[idx, :]
     n_timestamps = ts.shape[0]
 
-    clasp = BinaryClaSPSegmentation()
-    cps_pred = clasp.fit_predict(ts[:, 1])
+    clasp = MultivariateClaSPSegmentation()
+    cps_pred = clasp.fit_predict(ts)
 
     f1_score = np.round(f_measure({0: cps_true}, cps_pred, margin=int(n_timestamps * .01)), 3)
     covering_score = np.round(covering({0: cps_true}, cps_pred, n_timestamps), 3)

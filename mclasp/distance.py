@@ -38,7 +38,7 @@ def sliding_mean_std(time_series, window_size):
     --------
     >>> time_series = [1, 2, 3, 4, 5, 6, 7]
     >>> window_size = 3
-    >>> movmean, movstd = _sliding_mean_std(time_series, window_size)
+    >>> movmean, movstd = sliding_mean_std(time_series, window_size)
     """
     s = np.concatenate((np.zeros(1, dtype=np.float64), np.cumsum(time_series)))
     sSq = np.concatenate((np.zeros(1, dtype=np.float64), np.cumsum(time_series ** 2)))

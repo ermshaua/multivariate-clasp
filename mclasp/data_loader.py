@@ -39,7 +39,7 @@ def load_tssb_dataset(names=None, extract_path=None):
         saving it to the extract_path.
     extract_path : str, optional (default=None)
         the path to look for the data. If no path is provided, the function
-        looks in `claspy/tests/data/tssb/`.
+        looks in `mclasp/tests/data/tssb/`.
     Returns
     -------
     tssb: pandas DataFrame

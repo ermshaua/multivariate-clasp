@@ -1,6 +1,6 @@
 from scipy.stats import ranksums
 
-from claspy.nearest_neighbour import cross_val_labels
+from mclasp.nearest_neighbour import cross_val_labels
 
 
 def significance_test(clasp, change_point, threshold=1e-15):
