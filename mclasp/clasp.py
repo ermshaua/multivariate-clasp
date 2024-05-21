@@ -115,12 +115,13 @@ class ClaSP:
     """
 
     def __init__(self, window_size=10, k_neighbours=3, distance="znormed_euclidean_distance", score="roc_auc",
-                 excl_radius=5, n_jobs=-1):
+                 aggregation="dist", excl_radius=5, n_jobs=-1):
         self.window_size = window_size
         self.k_neighbours = k_neighbours
         self.distance = distance
         self.score_name = score
         self.score = map_scores(score)
+        self.aggregation = aggregation
         self.excl_radius = excl_radius
         self.n_jobs = os.cpu_count() if n_jobs < 1 else n_jobs
         self.is_fitted = False
@@ -186,6 +187,7 @@ class ClaSP:
                 window_size=self.window_size,
                 k_neighbours=self.k_neighbours,
                 distance=self.distance,
+                aggregation=self.aggregation,
                 n_jobs=self.n_jobs
             ).fit(time_series)
         else:
@@ -329,8 +331,8 @@ class ClaSPEnsemble(ClaSP):
     """
 
     def __init__(self, n_estimators=10, window_size=10, k_neighbours=3, distance="znormed_euclidean_distance",
-                 score="roc_auc", early_stopping=True, excl_radius=5, n_jobs=-1, random_state=2357):
-        super().__init__(window_size, k_neighbours, distance, score, excl_radius, n_jobs)
+                 score="roc_auc", early_stopping=True, aggregation="dist", excl_radius=5, n_jobs=-1, random_state=2357):
+        super().__init__(window_size, k_neighbours, distance, score, aggregation, excl_radius, n_jobs)
         self.n_estimators = n_estimators
         self.early_stopping = early_stopping
         self.random_state = random_state
@@ -411,6 +413,7 @@ class ClaSPEnsemble(ClaSP):
                 window_size=self.window_size,
                 k_neighbours=self.k_neighbours,
                 distance=self.distance,
+                aggregation=self.aggregation,
                 n_jobs=self.n_jobs
             ).fit(time_series, temporal_constraints=tcs)
 
@@ -421,6 +424,7 @@ class ClaSPEnsemble(ClaSP):
                 window_size=self.window_size,
                 k_neighbours=self.k_neighbours,
                 score=self.score_name,
+                aggregation=self.aggregation,
                 excl_radius=self.excl_radius,
                 n_jobs=self.n_jobs
             ).fit(time_series[lbound:ubound], knn=knn.constrain(lbound, ubound))

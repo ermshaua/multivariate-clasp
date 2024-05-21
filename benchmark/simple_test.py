@@ -11,16 +11,17 @@ import numpy as np
 
 np.random.seed(1379)
 
+
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
 
-    df_data = load_has_datasets()
+    df_data = load_has_datasets(split="public")
 
     idx = 0
     dataset, w, cps_true, labels, ts = df_data.iloc[idx, :]
     n_timestamps = ts.shape[0]
 
-    clasp = MultivariateClaSPSegmentation()
+    clasp = MultivariateClaSPSegmentation(aggregation="dist_mSTAMP")
     cps_pred = clasp.fit_predict(ts)
 
     f1_score = np.round(f_measure({0: cps_true}, cps_pred, margin=int(n_timestamps * .01)), 3)

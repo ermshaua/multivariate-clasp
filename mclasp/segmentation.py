@@ -78,7 +78,7 @@ class MultivariateClaSPSegmentation:
 
     def __init__(self, n_segments="learn", n_estimators=10, window_size="suss", k_neighbours=3,
                  distance="znormed_euclidean_distance", score="roc_auc",
-                 early_stopping=True, validation="significance_test", threshold=1e-15, excl_radius=5,
+                 early_stopping=True, validation="significance_test", aggregation="dist", threshold=1e-30, excl_radius=5,
                  n_jobs=-1, random_state=2357):
         self.n_segments = n_segments
         self.n_estimators = n_estimators
@@ -86,6 +86,7 @@ class MultivariateClaSPSegmentation:
         self.k_neighbours = k_neighbours
         self.distance = distance
         self.validation = validation
+        self.aggregation = aggregation
         self.threshold = threshold
         self.score = score
         self.early_stopping = early_stopping
@@ -145,6 +146,7 @@ class MultivariateClaSPSegmentation:
             distance=self.distance,
             score=self.score,
             early_stopping=self.early_stopping,
+            aggregation=self.aggregation,
             excl_radius=self.excl_radius,
             n_jobs=self.n_jobs,
             random_state=self.random_state
@@ -206,7 +208,7 @@ class MultivariateClaSPSegmentation:
             W = []
 
             for dim in range(time_series.shape[1]):
-                W.append(max(1, map_window_size_methods(self.window_size)(time_series[:, dim])))
+                W.append(max(3, map_window_size_methods(self.window_size)(time_series[:, dim])))
 
             if len(W) > 0:
                 self.window_size = int(np.min(W))
@@ -239,6 +241,7 @@ class MultivariateClaSPSegmentation:
                 distance=self.distance,
                 score=self.score,
                 early_stopping=self.early_stopping,
+                aggregation=self.aggregation,
                 excl_radius=self.excl_radius,
                 n_jobs=self.n_jobs,
                 random_state=self.random_state
@@ -246,7 +249,7 @@ class MultivariateClaSPSegmentation:
 
             cp = clasp.split(validation=self.validation, threshold=self.threshold)
 
-            if cp is not None:
+            if cp is not None and self._cp_is_valid(cp, []):
                 self.clasp_tree.append((prange, clasp))
                 self.queue.put((-clasp.profile[cp], len(self.clasp_tree) - 1))
 
