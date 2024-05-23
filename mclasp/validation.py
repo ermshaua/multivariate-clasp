@@ -1,3 +1,4 @@
+import numpy as np
 from scipy.stats import ranksums
 
 from mclasp.nearest_neighbour import cross_val_labels
@@ -29,7 +30,19 @@ def significance_test(clasp, change_point, threshold=1e-15):
     and the method returns True. Otherwise, the change point is considered not significant and the method returns False.
 
     """
-    _, y_pred = cross_val_labels(clasp.knn.offsets, change_point-clasp.lbound, clasp.window_size)
+    if clasp.aggregation.startswith("dist"):
+        _, y_pred = cross_val_labels(clasp.knns[0].offsets, change_point - clasp.lbound, clasp.window_size)
+    elif clasp.aggregation.startswith("score"):
+        if len(clasp.knns) == 0: return False
+        preds = np.zeros(shape=(len(clasp.knns), len(clasp.knns[0].offsets)), dtype=np.int64)
+
+        for idx, knn in enumerate(clasp.knns):
+            _, preds[idx] = cross_val_labels(clasp.knns[idx].offsets, change_point - clasp.lbound, clasp.window_size)
+
+        y_pred = preds.mean(axis=0)
+    else:
+        raise ValueError(f"{clasp.aggregation} is not a valid aggregation method.")
+
     _, p = ranksums(y_pred[:change_point], y_pred[change_point:])
     return p <= threshold
 

@@ -144,7 +144,7 @@ class ClaSP:
         if not self.is_fitted:
             raise NotFittedError("ClaSP object is not fitted yet. Please fit the object before using this method.")
 
-    def fit(self, time_series, knn=None):
+    def fit(self, time_series, knns=None, validation="significance_test", threshold=1e-30):
         """
         Fits the ClaSP model to the input time series data.
 
@@ -182,36 +182,83 @@ class ClaSP:
 
         self.time_series = time_series
 
-        if knn is None:
-            self.knn = KSubsequenceNeighbours(
-                window_size=self.window_size,
-                k_neighbours=self.k_neighbours,
-                distance=self.distance,
-                aggregation=self.aggregation,
-                n_jobs=self.n_jobs
-            ).fit(time_series)
-        else:
-            self.knn = knn
+        if knns is None:
+            knns = []
+
+            if self.aggregation.startswith("dist"):
+                knns.append(
+                    KSubsequenceNeighbours(
+                        window_size=self.window_size,
+                        k_neighbours=self.k_neighbours,
+                        distance=self.distance,
+                        aggregation=self.aggregation,
+                        n_jobs=self.n_jobs
+                    ).fit(time_series)
+                )
+            elif self.aggregation.startswith("score"):
+                for dim in range(time_series.shape[1]):
+                    knns.append(
+                        KSubsequenceNeighbours(
+                            window_size=self.window_size,
+                            k_neighbours=self.k_neighbours,
+                            distance=self.distance,
+                            aggregation=self.aggregation,
+                            n_jobs=self.n_jobs
+                        ).fit(time_series[:,dim])
+                    )
+            else:
+                raise ValueError(f"{self.aggregation} is not a valid aggregation method.")
 
         pranges = List()
         n_jobs = self.n_jobs
+        n_offsets = knns[0].offsets.shape[0]
 
-        while self.knn.offsets.shape[0] // n_jobs < self.min_seg_size and n_jobs != 1:
+        while n_offsets // n_jobs < self.min_seg_size and n_jobs != 1:
             n_jobs -= 1
 
-        bin_size = self.knn.offsets.shape[0] // n_jobs
+        bin_size = n_offsets // n_jobs
 
         for idx in range(n_jobs):
             start = max(idx * bin_size, self.min_seg_size)
-            end = min((idx + 1) * bin_size, self.knn.offsets.shape[0] - self.min_seg_size + self.window_size)
+            end = min((idx + 1) * bin_size, n_offsets - self.min_seg_size + self.window_size)
             if end > start: pranges.append((start, end))
 
         n_threads = get_num_threads()
         set_num_threads(n_jobs)
 
-        self.profile = numba_cache_safe(_parallel_profile, self.knn.offsets, pranges, self.window_size, self.score)
+        if self.aggregation.startswith("dist"):
+            self.profile = numba_cache_safe(_parallel_profile, knns[0].offsets, pranges, self.window_size, self.score)
+        elif self.aggregation.startswith("score"):
+            profiles = np.full(shape=(time_series.shape[1], n_offsets), fill_value=-np.inf, dtype=np.float64)
+
+            for idx, knn in enumerate(knns):
+                profiles[idx] = numba_cache_safe(_parallel_profile, knn.offsets, pranges, self.window_size, self.score)
+
+            if self.aggregation == "score_threshold":
+                mask = np.full(profiles.shape[0], fill_value=True, dtype=bool)
+                self.is_fitted = True
+
+                for idx, knn in enumerate(knns):
+                    self.knns = [knn]
+                    self.profile = profiles[idx]
+                    mask[idx] = self.split(validation=validation, threshold=threshold) is not None
+
+                knns = [knn for idx, knn in enumerate(knns) if mask[idx]]
+                self.profile = profiles[mask].mean(axis=0)
+            elif self.aggregation == "score_max":
+                maxima = np.array([np.max(p) for p in profiles])
+                args = np.argsort(maxima)[::-1]
+
+                knns = [knn for idx, knn in enumerate(knns) if idx in args[:time_series.shape[1] // 2]]
+                self.profile = profiles[args][:time_series.shape[1] // 2].mean(axis=0)
+            else:
+                self.profile = profiles.mean(axis=0)
+        else:
+            raise ValueError(f"{self.aggregation} is not a valid aggregation method.")
 
         set_num_threads(n_threads)
+
+        self.knns = knns
         self.is_fitted = True
         return self
 
@@ -227,7 +274,7 @@ class ClaSP:
         self._check_is_fitted()
         return self.profile
 
-    def fit_transform(self, time_series, knn=None):
+    def fit_transform(self, time_series, knns=None, validation="significance_test", threshold=1e-30):
         """
         Fit the ClaSP algorithm to the given time series and return the
         corresponding profile.
@@ -247,9 +294,9 @@ class ClaSP:
             The ClaSP scores corresponding to each time point of the input time series.
 
         """
-        return self.fit(time_series, knn).transform()
+        return self.fit(time_series, knns, validation, threshold).transform()
 
-    def split(self, sparse=True, validation="significance_test", threshold=1e-15):
+    def split(self, sparse=True, validation="significance_test", threshold=1e-30):
         """
         Split the input time series into two segments using the change point location.
 
@@ -361,7 +408,7 @@ class ClaSPEnsemble(ClaSP):
 
         return np.asarray(sorted(tcs, key=lambda tc: tc[1] - tc[0], reverse=True), dtype=np.int64)
 
-    def fit(self, time_series, knn=None, validation="significance_test", threshold=1e-15):
+    def fit(self, time_series, knns=None, validation="significance_test", threshold=1e-30):
         """
         Fits the ClaSP ensemble on the given time series, using temporal constraints to so that
         each ClaSP instance works on different (but possibly overlapping) parts of the time series.
@@ -408,18 +455,38 @@ class ClaSPEnsemble(ClaSP):
         self.time_series = time_series
         tcs = self._calculate_temporal_constraints()
 
-        if knn is None:
-            knn = KSubsequenceNeighbours(
-                window_size=self.window_size,
-                k_neighbours=self.k_neighbours,
-                distance=self.distance,
-                aggregation=self.aggregation,
-                n_jobs=self.n_jobs
-            ).fit(time_series, temporal_constraints=tcs)
+        if knns is None:
+            knns = []
+
+            if self.aggregation.startswith("dist"):
+                knns.append(
+                    KSubsequenceNeighbours(
+                        window_size=self.window_size,
+                        k_neighbours=self.k_neighbours,
+                        distance=self.distance,
+                        aggregation=self.aggregation,
+                        n_jobs=self.n_jobs
+                    ).fit(time_series, temporal_constraints=tcs)
+                )
+            elif self.aggregation.startswith("score"):
+                for dim in range(time_series.shape[1]):
+                    knns.append(
+                        KSubsequenceNeighbours(
+                            window_size=self.window_size,
+                            k_neighbours=self.k_neighbours,
+                            distance=self.distance,
+                            aggregation=self.aggregation,
+                            n_jobs=self.n_jobs
+                        ).fit(time_series[:, dim], temporal_constraints=tcs)
+                    )
+            else:
+                raise ValueError(f"{self.aggregation} is not a valid aggregation method.")
 
         best_score, best_tc, best_clasp = -np.inf, None, None
 
         for idx, (lbound, ubound) in enumerate(tcs):
+            constrained_knns = [knn.constrain(lbound, ubound) for knn in knns]
+
             clasp = ClaSP(
                 window_size=self.window_size,
                 k_neighbours=self.k_neighbours,
@@ -427,7 +494,7 @@ class ClaSPEnsemble(ClaSP):
                 aggregation=self.aggregation,
                 excl_radius=self.excl_radius,
                 n_jobs=self.n_jobs
-            ).fit(time_series[lbound:ubound], knn=knn.constrain(lbound, ubound))
+            ).fit(time_series[lbound:ubound], knns=constrained_knns, validation=validation, threshold=threshold)
 
             clasp.profile = (clasp.profile + (ubound - lbound) / time_series.shape[0]) / 2
 
@@ -444,11 +511,11 @@ class ClaSPEnsemble(ClaSP):
         self.profile = np.full(shape=time_series.shape[0] - self.window_size + 1, fill_value=-np.inf, dtype=np.float64)
 
         if best_clasp is not None:
-            self.knn = best_clasp.knn
+            self.knns = best_clasp.knns
             self.lbound, self.ubound = best_tc
             self.profile[self.lbound:self.ubound - self.window_size + 1] = best_clasp.profile
         else:
-            self.knn = knn
+            self.knns = knns
             self.lbound, self.ubound = 0, self.time_series.shape[0]
 
         self.is_fitted = True

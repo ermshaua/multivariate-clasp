@@ -21,7 +21,7 @@ if __name__ == '__main__':
     dataset, w, cps_true, labels, ts = df_data.iloc[idx, :]
     n_timestamps = ts.shape[0]
 
-    clasp = MultivariateClaSPSegmentation(aggregation="dist_mSTAMP")
+    clasp = MultivariateClaSPSegmentation(aggregation="score_max")
     cps_pred = clasp.fit_predict(ts)
 
     f1_score = np.round(f_measure({0: cps_true}, cps_pred, margin=int(n_timestamps * .01)), 3)
