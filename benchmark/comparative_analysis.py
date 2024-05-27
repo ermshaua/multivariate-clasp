@@ -43,5 +43,5 @@ if __name__ == '__main__':
     if not os.path.exists(exp_path):
         os.mkdir(exp_path)
 
-    for bench in ("HAS_test",):
+    for bench in ("HAS_test",): #
         evaluate_competitor(bench, exp_path, n_jobs, verbose)
