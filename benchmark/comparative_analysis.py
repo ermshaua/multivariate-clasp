@@ -12,6 +12,7 @@ import numpy as np
 np.random.seed(1379)
 
 
+# evaluates competitors on given data set
 def evaluate_competitor(dataset_name, exp_path, n_jobs, verbose):
     if not os.path.exists(exp_path):
         os.mkdir(exp_path)
@@ -43,5 +44,5 @@ if __name__ == '__main__':
     if not os.path.exists(exp_path):
         os.mkdir(exp_path)
 
-    for bench in ("HAS_test",): #
+    for bench in ("HAS_test",):
         evaluate_competitor(bench, exp_path, n_jobs, verbose)

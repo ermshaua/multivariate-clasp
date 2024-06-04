@@ -14,6 +14,7 @@ import numpy as np
 np.random.seed(1379)
 
 
+# computes ablation study on given data set
 def evaluate_competitor(dataset_name, exp_path, n_jobs, verbose):
     if not os.path.exists(exp_path):
         os.mkdir(exp_path)

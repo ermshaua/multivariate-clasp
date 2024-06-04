@@ -7,6 +7,7 @@ from benchmark.metrics import covering, f_measure
 from src.utils import load_has_datasets, load_datasets
 
 
+# evaluates results from segmentation algorithm
 def evalute_segmentation_algorithm(dataset, n_timestamps, cps_true, cps_pred, profile=None):
     f1_score = np.round(f_measure({0: cps_true}, cps_pred, margin=int(n_timestamps * .01)), 3)
     covering_score = np.round(covering({0: cps_true}, cps_pred, n_timestamps), 3)
@@ -19,6 +20,7 @@ def evalute_segmentation_algorithm(dataset, n_timestamps, cps_true, cps_pred, pr
     return dataset, cps_true.tolist(), cps_pred.tolist(), f1_score, covering_score
 
 
+# evaluates competitor on given data set
 def evaluate_candidate(dataset_name, candidate_name, eval_func, columns=None, n_jobs=1, verbose=0, **seg_kwargs):
     if dataset_name == "HAS":
         df = load_has_datasets()
@@ -28,9 +30,6 @@ def evaluate_candidate(dataset_name, candidate_name, eval_func, columns=None, n_
         df = load_has_datasets(split="private")
     else:
         df = load_datasets(dataset_name)
-
-    # apply selection
-    # df = df.sample(n=25, random_state=2357)
 
     df_cand = dp.map(
         lambda _, args: eval_func(*args, **seg_kwargs),

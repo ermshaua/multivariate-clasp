@@ -48,6 +48,9 @@ class MultivariateClaSPSegmentation:
         The validation method to use for determining the significance of the change point.
         The available methods are "significance_test" and "score_threshold". Default is
         "significance_test".
+    aggregation : str, optional
+        The name of the aggregation type used for multivariate time series.
+        Available options are "dist" for distance averaging, "score" for profile averaging, by default "dist".
     threshold : float, optional
         The threshold value to use for the validation test. If the validation method is
         "significance_test", this value represents the p-value threshold for rejecting the
@@ -184,7 +187,7 @@ class MultivariateClaSPSegmentation:
 
         Parameters
         ----------
-        time_series : array-like of shape (n_samples,)
+        time_series : array-like of shape (n_samples,) or (n_samples, d_dimensions)
             The input time series.
 
         Returns
@@ -197,12 +200,7 @@ class MultivariateClaSPSegmentation:
         ValueError
             If the input time series has less than 2 times the minimum segment size.
         """
-        # TODO: check multivariate TS
-        # check_input_time_series(time_series)
-
-        if time_series.ndim == 1:
-            # make ts multi-dimensional
-            time_series = time_series.reshape(-1, 1)
+        time_series = check_input_time_series(time_series)
 
         if isinstance(self.window_size, str):
             W = []
@@ -319,7 +317,7 @@ class MultivariateClaSPSegmentation:
         Parameters:
         -----------
         time_series : numpy.ndarray
-            A one-dimensional numpy array containing the time series.
+            A one or two-dimensional numpy array containing the time series.
         sparse : bool, optional (default=True)
             Whether to return the change point indices only, or to return the segmented time series.
 
@@ -330,7 +328,7 @@ class MultivariateClaSPSegmentation:
         """
         return self.fit(time_series).predict(sparse)
 
-    def plot(self, gt_cps=None, heading=None, ts_name=None, fig_size=(20, 10), font_size=26, file_path=None):
+    def plot(self, gt_cps=None, heading=None, ts_name=None, fig_size=(20, 10), font_size=18, file_path=None):
         """
         Plot the fitted time series annotated with ClaSP and found change points.
 
@@ -356,28 +354,33 @@ class MultivariateClaSPSegmentation:
             The two subplots of the resulting figure (the time series and the ClaSP plot).
         """
         self._check_is_fitted()
-        fig, (ax1, ax2) = plt.subplots(2, sharex=True, gridspec_kw={"hspace": .05}, figsize=fig_size)
+        fig, axes = plt.subplots(self.time_series.shape[1]+1, sharex=True, gridspec_kw={"hspace": .05}, figsize=fig_size)
+
+        ts_axes, profile_ax = axes[:-1], axes[-1]
 
         if gt_cps is not None:
             segments = [0] + gt_cps.tolist() + [self.time_series.shape[0]]
-            for idx in np.arange(0, len(segments) - 1):
-                ax1.plot(np.arange(segments[idx], segments[idx + 1]), self.time_series[segments[idx]:segments[idx + 1]])
+            for dim, ax in enumerate(ts_axes):
+                for idx in np.arange(0, len(segments) - 1):
+                    ax.plot(np.arange(segments[idx], segments[idx + 1]), self.time_series[segments[idx]:segments[idx + 1], dim])
 
-            ax2.plot(np.arange(self.profile.shape[0]), self.profile, color="black")
+            profile_ax.plot(np.arange(self.profile.shape[0]), self.profile, color="black")
         else:
-            ax1.plot(np.arange(self.time_series.shape[0]), self.time_series)
-            ax2.plot(np.arange(self.profile.shape[0]), self.profile, color="black")
+            for dim, ax in enumerate(ts_axes):
+                ax.plot(np.arange(self.time_series.shape[0]), self.time_series[:,dim])
+
+            profile_ax.plot(np.arange(self.profile.shape[0]), self.profile, color="black")
 
         if heading is not None:
-            ax1.set_title(heading, fontsize=font_size)
+            axes[0].set_title(heading, fontsize=font_size)
 
         if ts_name is not None:
-            ax1.set_ylabel(ts_name, fontsize=font_size)
+            axes[0].set_ylabel(ts_name, fontsize=font_size)
 
-        ax2.set_xlabel("split point", fontsize=font_size)
-        ax2.set_ylabel("ClaSP Score", fontsize=font_size)
+        profile_ax.set_xlabel("split point", fontsize=font_size)
+        profile_ax.set_ylabel("ClaSP Score", fontsize=font_size)
 
-        for ax in (ax1, ax2):
+        for ax in axes:
             for tick in ax.xaxis.get_major_ticks():
                 tick.label1.set_fontsize(font_size)
 
@@ -385,17 +388,17 @@ class MultivariateClaSPSegmentation:
                 tick.label1.set_fontsize(font_size)
 
         if gt_cps is not None:
-            for idx, true_cp in enumerate(gt_cps):
-                ax1.axvline(x=true_cp, linewidth=2, color="r", label=f"True Change Point" if idx == 0 else None)
-                ax2.axvline(x=true_cp, linewidth=2, color="r", label="True Change Point" if idx == 0 else None)
+            for ax in axes:
+                for idx, true_cp in enumerate(gt_cps):
+                    ax.axvline(x=true_cp, linewidth=2, color="r", label=f"True Change Point" if idx == 0 else None)
 
         for idx, found_cp in enumerate(self.change_points):
-            ax1.axvline(x=found_cp, linewidth=2, color="g", label="Predicted Change Point" if idx == 0 else None)
-            ax2.axvline(x=found_cp, linewidth=2, color="g", label="Predicted Change Point" if idx == 0 else None)
+            for ax in axes:
+                ax.axvline(x=found_cp, linewidth=2, color="g", label="Predicted Change Point" if idx == 0 else None)
 
-        ax1.legend(prop={"size": font_size})
+        axes[0].legend(prop={"size": font_size})
 
         if file_path is not None:
             plt.savefig(file_path, bbox_inches="tight")
 
-        return ax1, ax2
+        return axes

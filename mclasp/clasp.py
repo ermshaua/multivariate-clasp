@@ -97,6 +97,9 @@ class ClaSP:
     score : str or callable, optional
         The name of the classification score to use.
         Available options are "roc_auc", "f1", by default "roc_auc".
+    aggregation : str, optional
+        The name of the aggregation type used for multivariate time series.
+        Available options are "dist" for distance averaging, "score" for profile averaging, by default "dist".
     excl_radius : int, optional
         The radius of the exclusion zone around the detected change point, by default 5*window_size.
     n_jobs : int, optional (default=1)
@@ -153,10 +156,19 @@ class ClaSP:
         time_series : numpy.ndarray
             The input time series data to fit the model on.
 
-        knn : KSubsequenceNeighbours, optional
-            Pre-computed KSubsequenceNeighbours object to use for fitting the model.
-            If None (default), a new KSubsequenceNeighbours object will be created
+        knns : List of KSubsequenceNeighbours, optional
+            Pre-computed KSubsequenceNeighbours objects (one for each channel) to use for fitting the model.
+            If None (default), new KSubsequenceNeighbours objects will be created
             and fitted on the input time series data.
+        validation : str, optional
+            The validation method to use for determining the significance of the change point
+            when early stopping is activated. The available methods are "significance_test" and
+            "score_threshold". Default is "significance_test".
+        threshold : float, optional
+            The threshold value to use for the validation test. If the validation method is
+            "significance_test", this value represents the p-value threshold for rejecting the
+            null hypothesis. If the validation method is "score_threshold", this value represents
+            the threshold score for accepting the change point. Default is 1e-15.
 
         Returns
         -------
@@ -168,14 +180,9 @@ class ClaSP:
         ValueError
             If the input time series has less than 2*min_seg_size data points.
         """
-        # TODO: check multivariate TS
-        # check_input_time_series(time_series)
+        time_series = check_input_time_series(time_series)
         self.min_seg_size = self.window_size * self.excl_radius
         self.lbound, self.ubound = 0, time_series.shape[0]
-
-        if time_series.ndim == 1:
-            # make ts multi-dimensional
-            time_series = time_series.reshape(-1, 1)
 
         if time_series.shape[0] < 2 * self.min_seg_size:
             raise ValueError("Time series must at least have 2*min_seg_size data points.")
@@ -234,6 +241,7 @@ class ClaSP:
             for idx, knn in enumerate(knns):
                 profiles[idx] = numba_cache_safe(_parallel_profile, knn.offsets, pranges, self.window_size, self.score)
 
+            # profile averaging with significant profiles
             if self.aggregation == "score_threshold":
                 mask = np.full(profiles.shape[0], fill_value=True, dtype=bool)
                 self.is_fitted = True
@@ -245,6 +253,8 @@ class ClaSP:
 
                 knns = [knn for idx, knn in enumerate(knns) if mask[idx]]
                 self.profile = profiles[mask].mean(axis=0)
+
+            # profile averaging selecting ones with maximal scores
             elif self.aggregation == "score_max":
                 maxima = np.array([np.max(p) for p in profiles])
                 args = np.argsort(maxima)[::-1]
@@ -281,12 +291,21 @@ class ClaSP:
 
         Parameters
         ----------
-        time_series : np.ndarray, shape (n_timepoints,)
+        time_series : np.ndarray, shape (n_timepoints,) or (n_timepoints, d_dimensions)
             The input time series to be segmented.
-        knn : KSubsequenceNeighbours, optional
-            Pre-computed KSubsequenceNeighbours object to use for fitting the model.
-            If None (default), a new KSubsequenceNeighbours object will be created
+        knns : List of KSubsequenceNeighbours, optional
+            Pre-computed KSubsequenceNeighbours objects (one for each channel) to use for fitting the model.
+            If None (default), new KSubsequenceNeighbours objects will be created
             and fitted on the input time series data.
+        validation : str, optional
+            The validation method to use for determining the significance of the change point
+            when early stopping is activated. The available methods are "significance_test" and
+            "score_threshold". Default is "significance_test".
+        threshold : float, optional
+            The threshold value to use for the validation test. If the validation method is
+            "significance_test", this value represents the p-value threshold for rejecting the
+            null hypothesis. If the validation method is "score_threshold", this value represents
+            the threshold score for accepting the change point. Default is 1e-15.
 
         Returns
         -------
@@ -360,6 +379,9 @@ class ClaSPEnsemble(ClaSP):
     early_stopping : bool
         Determines if ensembling is stopped, once a validated change point is found or
         the ClaSP models do not improve anymore. Default is True.
+    aggregation : str, optional
+        The name of the aggregation type used for multivariate time series.
+        Available options are "dist" for distance averaging, "score" for profile averaging, by default "dist".
     excl_radius : int, optional
         The radius of the exclusion zone in the profile scoring. Default is 5*window_size.
     n_jobs : int, optional (default=1)
@@ -416,11 +438,11 @@ class ClaSPEnsemble(ClaSP):
         Parameters
         ----------
         time_series : np.ndarray
-            The input time series of shape (n_samples,).
-        knn : Optional[KSubsequenceNeighbours], default=None
-            The precomputed KSubsequenceNeighbours object to use. If None, it will be computed
-            using `KSubsequenceNeighbours` with the `window_size` and `k_neighbours` parameters
-            passed during the object initialization.
+            The input time series of shape (n_samples,) or (n_samples, d_dimensions)
+        knns : List of KSubsequenceNeighbours, optional
+            Pre-computed KSubsequenceNeighbours objects (one for each channel) to use for fitting the model.
+            If None (default), new KSubsequenceNeighbours objects will be created
+            and fitted on the input time series data.
         validation : str, optional
             The validation method to use for determining the significance of the change point
             when early stopping is activated. The available methods are "significance_test" and
@@ -441,13 +463,8 @@ class ClaSPEnsemble(ClaSP):
         ValueError
             If the input time series has less than 2 times the minimum segment size.
         """
-        # TODO: check multivariate TS
-        # check_input_time_series(time_series)
+        time_series = check_input_time_series(time_series)
         self.min_seg_size = self.window_size * self.excl_radius
-
-        if time_series.ndim == 1:
-            # make ts multi-dimensional
-            time_series = time_series.reshape(-1, 1)
 
         if time_series.shape[0] < 2 * self.min_seg_size:
             raise ValueError("Time series must at least have 2*min_seg_size data points.")

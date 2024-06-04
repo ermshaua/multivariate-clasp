@@ -10,6 +10,8 @@ import numpy as np
 
 np.random.seed(1379)
 
+
+# multivariate ClaSP (with PCA)
 def evaluate_pca(dataset, w, cps_true, labels, ts, **seg_kwargs):
     pca = PCA(n_components=1, random_state=2357)
     ts = pca.fit_transform(ts).flatten()
@@ -20,6 +22,7 @@ def evaluate_pca(dataset, w, cps_true, labels, ts, **seg_kwargs):
     return evalute_segmentation_algorithm(dataset, ts.shape[0], cps_true, cps_pred)
 
 
+# multivariate ClaSP (with ICA)
 def evaluate_ica(dataset, w, cps_true, labels, ts, **seg_kwargs):
     ica = FastICA(n_components=1, random_state=2357)
     ts = ica.fit_transform(ts).flatten()
@@ -30,6 +33,7 @@ def evaluate_ica(dataset, w, cps_true, labels, ts, **seg_kwargs):
     return evalute_segmentation_algorithm(dataset, ts.shape[0], cps_true, cps_pred)
 
 
+# multivariate ClaSP (with RP)
 def evaluate_rp(dataset, w, cps_true, labels, ts, **seg_kwargs):
     rp = GaussianRandomProjection(n_components=1, random_state=2357)
     ts = rp.fit_transform(ts).flatten()
@@ -40,36 +44,49 @@ def evaluate_rp(dataset, w, cps_true, labels, ts, **seg_kwargs):
     return evalute_segmentation_algorithm(dataset, ts.shape[0], cps_true, cps_pred)
 
 
+# multivariate ClaSP (with distance averaging)
 def evaluate_dist_average(dataset, w, cps_true, labels, ts, **seg_kwargs):
     clasp = MultivariateClaSPSegmentation(aggregation="dist", n_jobs=4)
     cps_pred = clasp.fit_predict(ts)
     return evalute_segmentation_algorithm(dataset, ts.shape[0], cps_true, cps_pred)
 
+
+# multivariate ClaSP (with distance averaging, selecting minimal distances)
 def evaluate_dist_average_min(dataset, w, cps_true, labels, ts, **seg_kwargs):
     clasp = MultivariateClaSPSegmentation(aggregation="dist_min", n_jobs=4)
     cps_pred = clasp.fit_predict(ts)
     return evalute_segmentation_algorithm(dataset, ts.shape[0], cps_true, cps_pred)
 
+
+# multivariate ClaSP (with distance averaging, selecting distances with mSTAMP)
 def evaluate_dist_average_mSTAMP(dataset, w, cps_true, labels, ts, **seg_kwargs):
     clasp = MultivariateClaSPSegmentation(aggregation="dist_mSTAMP", n_jobs=4)
     cps_pred = clasp.fit_predict(ts)
     return evalute_segmentation_algorithm(dataset, ts.shape[0], cps_true, cps_pred)
 
+
+# multivariate ClaSP (with profile averaging)
 def evaluate_profile_average(dataset, w, cps_true, labels, ts, **seg_kwargs):
     clasp = MultivariateClaSPSegmentation(aggregation="score", n_jobs=4)
     cps_pred = clasp.fit_predict(ts)
     return evalute_segmentation_algorithm(dataset, ts.shape[0], cps_true, cps_pred)
 
+
+# multivariate ClaSP (with profile averaging, selecting significant profiles)
 def evaluate_profile_average_threshold(dataset, w, cps_true, labels, ts, **seg_kwargs):
     clasp = MultivariateClaSPSegmentation(aggregation="score_threshold", n_jobs=4)
     cps_pred = clasp.fit_predict(ts)
     return evalute_segmentation_algorithm(dataset, ts.shape[0], cps_true, cps_pred)
 
+
+# multivariate ClaSP (with profile averaging, selecting profiles with maximal scores)
 def evaluate_profile_average_max(dataset, w, cps_true, labels, ts, **seg_kwargs):
     clasp = MultivariateClaSPSegmentation(aggregation="score_max", n_jobs=4)
     cps_pred = clasp.fit_predict(ts)
     return evalute_segmentation_algorithm(dataset, ts.shape[0], cps_true, cps_pred)
 
+
+# multivariate ClaSP (with CP selection clustering)
 def evaluate_cp_selection_clustering(dataset, w, cps_true, labels, ts, **seg_kwargs):
     profiles, found_cps, window_sizes = [], [], []
 
