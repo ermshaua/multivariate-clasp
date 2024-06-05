@@ -6,7 +6,7 @@ Human activity recognition (HAR) systems extract activities from observational d
 
 ## Benchmark Results
 
-We have evaluated 4 different strategies for multivariate ClaSP on 125 time series from the <a href="https://github.com/patrickzib/human_activity_segmentation_challenge">HAS challenge benchmark</a> (private split). The following table summarises the average Covering performance (higher is better) and the corresponding wins / ties. More details are in the paper. The raw measurements are <a href="https://github.com/ermshaua/multivariate-clasp/blob/main/experiments">here</a> and analysis Jupyter notebooks are <a target="_blank" href="https://github.com/ermshaua/multivariate-clasp/blob/main/notebooks/benchmark/">here</a>.
+We have evaluated 4 different strategies for multivariate ClaSP on 125 time series from the <a href="https://github.com/patrickzib/human_activity_segmentation_challenge">HAS challenge benchmark</a> (private split). The following table summarises the average Covering performance (higher is better) and the corresponding wins / ties. More details are in the paper. The raw measurements are <a href="https://github.com/ermshaua/multivariate-clasp/blob/main/experiments">here</a> and analysis Jupyter notebooks are <a target="_blank" href="https://github.com/ermshaua/multivariate-clasp/blob/main/notebooks/">here</a>.
 
 | Segmentation Algorithm | Average (in %) | Std. Dev. (in %) | Wins & Ties (in %) |
 |------------------------|----------------|------------------|--------------------
