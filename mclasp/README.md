@@ -1,0 +1,2 @@
+# Multivariate ClaSP
+This folder contains the implementation of multivariate ClaSP. It includes all variants tested in the paper, which are controllable by the `aggregation` parameter in the `MultivariateClaSPSegmentation` object.
