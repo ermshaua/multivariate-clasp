@@ -24,7 +24,7 @@ def evaluate_competitor(dataset_name, exp_path, n_jobs, verbose):
         ("ICA", evaluate_ica),
         ("RP", evaluate_rp),
         ("DistAvg", evaluate_dist_average),
-        ("mSTAMP", evaluate_dist_average_mSTAMP),
+        ("SortedDistAvg", evaluate_dist_average_mSTAMP),
         ("MinDistAvg", evaluate_dist_average_min),
         ("ProfileAvg", evaluate_profile_average),
         ("ThresholdProfileAvg", evaluate_profile_average_threshold),

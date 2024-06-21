@@ -4,7 +4,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from benchmark.metrics import covering, f_measure
-from src.utils import load_has_datasets, load_datasets
+from src.utils import load_has_datasets
 
 
 # evaluates results from segmentation algorithm
