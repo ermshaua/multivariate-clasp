@@ -8,12 +8,12 @@ Human activity recognition (HAR) systems extract activities from observational d
 
 We have evaluated 4 different strategies for multivariate ClaSP on 125 time series from the <a href="https://github.com/patrickzib/human_activity_segmentation_challenge">HAS challenge benchmark</a> (private split). The following table summarises the average Covering performance (higher is better) and the corresponding wins / ties. More details are in the paper. The raw measurements are <a href="https://github.com/ermshaua/multivariate-clasp/blob/main/experiments">here</a> and analysis Jupyter notebooks are <a target="_blank" href="https://github.com/ermshaua/multivariate-clasp/blob/main/notebooks/">here</a>.
 
-| Segmentation Algorithm | Average (in %) | Std. Dev. (in %) | Wins & Ties (in %) |
-|------------------------|----------------|------------------|--------------------
-| Distance Averaging     | 73.2           | 20.1             | 51                 |
-| Change Point Weighting | 71.6           | 21.4             | 42                 |
-| Profile Averaging      | 70.7           | 22.2             | 34                 |
-| PCA                    | 65.8           | 24.5             | 35                 |
+| Segmentation Algorithm | Average (in %) | Std. Dev. (in %) | Wins & Ties |
+|------------------------|----------------|------------------|-------------
+| Distance Averaging     | 73.2           | 20.1             | 53          |
+| Change Point Weighting | 71.6           | 21.4             | 35          |
+| Profile Averaging      | 70.7           | 22.2             | 38          |
+| PCA                    | 65.8           | 24.5             | 33          |
 
 ## Organisation
 
@@ -33,4 +33,13 @@ You can download this repository (by clicking the download button in the upper r
 
 ## Citation
 
-The associated paper to this repository is currently under review. After publication, you will find a citation request here.
+If you want reference our work in your scientific publication, we would appreciate the following citation:
+
+```
+@inproceedings{mclasp2024,
+  title={Multivariate Human Activity Segmentation: Systematic Benchmark with ClaSP},
+  author={Ermshaus, Arik and Sch{\"a}fer, Patrick and Leser, Ulf},
+  booktitle={9th Workshop on Advanced Analytics and Learning on Temporal Data},
+  year={2024}
+}
+```
